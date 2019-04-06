@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+        <link rel="stylesheet" type="text/css" href="refactor.css">
+        <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
+    </head>
+
+    <body>
+            <div id="container">
+            </div>
+                
+            
+            <script>
+                
+            generatePrompt("-start-");
+
+            var socket = io();
+
+            var emojis = [];
+
+            function generatePrompt(msg){
+
+                var active = $('#activePrompt');
+
+                $(active).animate({
+                    top: '-50%',
+                    opacity: '0'
+                }, 750, function(){
+                    $(this).remove();
+                });
+                active.removeAttr('id');
+                
+                $('#activePrompt > .prompt-entry > .prompt-entry-field').off('keydown');
+
+                emojis = [];
+                
+                
+                var nextPrompt =  $('<div/>', {'id': 'activePrompt', 'class': 'prompt' }).append(
+                    $('<div/>', {'class': 'prompt-text'}))
+                    .append(
+                    $('<div/>', {'class': 'prompt-entry'})
+                );
+
+                nextPrompt.appendTo($('#container'));
+
+
+                nextPrompt.animate({
+                    top: '25%',
+                    opacity: '1'
+                }, 750, function(){
+                    $('#activePrompt > .prompt-entry').append(
+                        $('<textarea/>', {'class': 'prompt-entry-field'})
+                    );
+
+
+                    $("#activePrompt > .prompt-entry > .prompt-entry-field").focus();
+                    $("#activePrompt > .prompt-entry > .prompt-entry-field").on("keydown", inputChar);
+                });
+
+
+                $('#activePrompt > .prompt-text').text(msg);
+            }
+
+            function populateEmojiList(obj){
+
+                var output = "";
+                for(var i = 0; i < emojis.length; i++){
+                    output += emojis[i];
+                }
+
+                $(obj).val(output);
+            }
+
+
+            function unicodeLiteral(str){
+                var i;
+                var result = "";
+                for( i = 0; i < str.length; ++i){
+                /* You should probably replace this by an isASCII test */
+                    if(str.charCodeAt(i) > 126 || str.charCodeAt(i) < 32)
+                        result += "\\u" + fixedHex(str.charCodeAt(i),4);
+                    else
+                        result += str[i];
+                }
+
+                return result;
+            }
+
+            function inputChar(e, options) {
+
+                    e.preventDefault();
+                    var obj = $("#activePrompt > .prompt-entry > .prompt-entry-field");
+
+                    //SUBMIT
+                    if(e.keyCode == 13){
+
+                        if(obj.val() != ""){
+                            socket.emit('submit', { 
+                                prompt: $("#activePrompt > .prompt-text").text(),
+                                emojis: obj.val()
+                            });
+                        }
+                    }
+                    //BACKSPACE
+                    else if(e.keyCode == 8){
+                        emojis.splice(-1,1);
+                        populateEmojiList(obj);
+                        socket.emit('delete');
+                    }
+                    else{
+                            socket.emit('get-emoji', {
+                                keyCode: e.keyCode
+                            }, function (msg) {
+
+                                if(msg != ""){
+                                    emojis.push(msg.emoji);
+                                }
+                                
+                                populateEmojiList(obj);
+
+
+                                if (obj[0].clientHeight < obj[0].scrollHeight){
+                                    console.log("HIT");
+                                    emojis.splice(-1,1);
+                                    populateEmojiList(obj);
+                                }
+                                else{
+                                    socket.emit('successful-add', {emoji: msg.emoji});
+                                }
+                                    
+                            
+                        });
+                    }
+                }
+
+
+                socket.on('new-prompt', function(msg){
+                    generatePrompt(msg.prompt);
+                });
+
+                socket.on('new-emoji', function(msg){
+                    emojis.push(msg.emoji);
+                    populateEmojiList($("#activePrompt > .prompt-entry > .prompt-entry-field"));
+                });
+
+                socket.on('remove-emoji', function(){
+                    emojis.splice(-1,1);
+                    populateEmojiList($("#activePrompt > .prompt-entry > .prompt-entry-field"));
+                });
+
+            </script>
+
+    </body>
+</html>

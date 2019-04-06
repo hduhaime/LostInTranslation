@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+        <link rel="stylesheet" type="text/css" href="stylesheet.css">
+    </head>
+
+    <body>
+
+            <div id="container">
+    
+                    <div id="box1" class="box">Div #1</div>
+                    <div id="box2" class="box">Div #2</div>
+                    <div id="box3" class="box">Div #3</div>
+                    <div id="box4" class="box">Div #4</div>
+                    <div id="box5" class="box">Div #5</div>
+                    
+                </div>
+                
+
+            <script>
+            $('.box').click(function() {
+
+$(this).animate({
+    left: '-50%'
+}, 500, function() {
+    $(this).css('left', '150%');
+    $(this).appendTo('#container');
+});
+
+$(this).next().animate({
+    left: '50%'
+}, 500);
+});</script>
+            <div class="mainContainer">
+                    <div class="centerBlock">
+                        
+                    </div>
+            </div>
+
+            <script>
+
+                var socket = io();
+
+                // (function($) {
+                //     $.fn.setCursorPosition = function(pos) {
+                //         if ($(this).get(0).setSelectionRange) {
+                //             $(this).get(0).setSelectionRange(pos, pos);
+                //         } else if ($(this).get(0).createTextRange) {
+                //             var range = $(this).get(0).createTextRange();
+                //             range.collapse(true);
+                //             range.moveEnd('character', pos);
+                //             range.moveStart('character', pos);
+                //             range.select();
+                //         }
+                //     }
+                // }(jQuery));
+
+                function addChoice() {
+                    // var html = `<div id = "selected" class = "centerBlockOrganizer">
+                    //             <div class="prompt">
+                    //                 <div id = "promptText">What's your favorite color?</div>    
+                    //             </div>
+                    //                 <div class="textBox">
+                    //                 <textarea autofocus class="emoji-input"></textarea>
+                    //             </div>
+                    //     </div>
+                    // `;
+                    var html = `<div id = "selected" class = "centerBlockOrganizer"></div>`;
+
+                    var s = $('#selected');
+
+                    if(s){
+                        s.removeAttr('id');
+                        s.addClass('offscreen');
+                    }
+
+                    $(html).appendTo($(".centerBlock"));
+                }
+
+                addChoice();
+
+                function fixedHex(number, length){
+                    var str = number.toString(16).toUpperCase();
+                    while(str.length < length)
+                        str = "0" + str;
+                    return str;
+                }
+
+                var emojis = [];
+
+                function populateEmojiList(obj){
+
+                    var output = "";
+                    for(var i = 0; i < emojis.length; i++){
+                        output += emojis[i];
+                    }
+
+                    $(obj).val(output);
+                }
+
+
+                function unicodeLiteral(str){
+                    var i;
+                    var result = "";
+                    for( i = 0; i < str.length; ++i){
+                        console.log(str.charCodeAt(i));
+                    /* You should probably replace this by an isASCII test */
+                        if(str.charCodeAt(i) > 126 || str.charCodeAt(i) < 32)
+                            result += "\\u" + fixedHex(str.charCodeAt(i),4);
+                        else
+                            result += str[i];
+                    }
+
+                    return result;
+                }
+
+                $('.emoji-input').keydown(function(e, options) {
+                    
+                    e.preventDefault();
+
+                    var obj = this;
+
+                    if(e.keyCode == 13){
+                        //SUBMIT
+                        var curSelected = $('#selected');
+                        var newObj = curSelected(clone)
+                    }
+                    else if(e.keyCode == 8){
+                        emojis.splice(-1,1);
+                        populateEmojiList(obj);
+                    }
+                    else{
+                    
+                        socket.emit('get-emoji', {
+                                keyCode: e.keyCode
+                            }, function (msg) {
+
+                                if(msg != ""){
+                                    emojis.push(msg.emoji);
+                                }
+                                
+                                populateEmojiList(obj);
+
+                                if (obj.clientHeight < obj.scrollHeight){
+                                    emojis.splice(-1,1);
+                                    populateEmojiList(obj);
+                                }
+                                    
+                            
+                        });
+                    }
+                });
+
+
+
+// $("#id").keyup(function(){
+//     if ($(this).val().split('').pop() !== '?') {
+//         $(this).val($(this).val() + "?");
+//         $(this).setCursorPosition( $(this).val().length - 1)
+//     }
+// });​
+
+    
+                </script>
+
+            </div>
+        </div>
+    </body>
+</html>
